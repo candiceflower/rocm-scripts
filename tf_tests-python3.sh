@@ -18,7 +18,7 @@ download_tensorflow_models()
 {
     cd $BASEDIR
         rm -rf models
-    git clone https://github.com/tensorflow/models.git
+    git clone -b r1.13.0 https://github.com/tensorflow/models.git
     # FIXME:  workaround to support TF v1.0.1
     pushd models
     popd
@@ -27,7 +27,7 @@ download_tensorflow_benchmarks()
 {
     cd $BASEDIR
         rm -rf benchmarks
-        git clone -b cnn_tf_v1.13_compatible https://github.com/tensorflow/benchmarks && cd benchmarks
+        git clone -b cnn_tf_v1.12_compatible https://github.com/tensorflow/benchmarks && cd benchmarks
         #git checkout -b may22 ddb23306fdc60fefe620e6ce633bcd645561cb0d
         #sed -i 's|from tensorflow.contrib import nccl|#from tensorflow.contrib import nccl|g' ./scripts/tf_cnn_benchmarks/variable_mgr.py
         cd ..
@@ -213,6 +213,7 @@ run_flower_alexnet()
     mkdir -p /dockerx/flower-alexnet
     rm -rf /dockerx/flower-alexnet/*
     wget https://raw.githubusercontent.com/pramenku/rocm-scripts/master/preprocessing_factory.py
+     chmod 775 preprocessing_factory.py
     cp -rf preprocessing_factory.py /root/models/research/slim/preprocessing/
        
         cd $MODELDIR/research/slim

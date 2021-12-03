@@ -1,9 +1,9 @@
 #!/bin/bash
 current=`pwd`
-dir=/home
+dir=/root/driver
 logs=/dockerx
 
-export LD_LIBRARY_PATH=/opt/rocm/lib:$LD_LIBRARY_PATH
+#export LD_LIBRARY_PATH=/opt/rocm/lib:$LD_LIBRARY_PATH
 
 echo "==============================rocrand=============================="
 cd $dir/rocRAND/build
@@ -12,8 +12,12 @@ ctest --output-on-failure 2>&1 | tee $logs/rocrand-ut.log
 ./benchmark/benchmark_rocrand_generate --engine all --dis all 2>&1 | tee $logs/bm_rocrand_generate.log
 
 cd $dir
+echo "==============================rccl============================="
+./rccl/install.sh -dtr 2>&1 | tee $logs/rccl.log
 echo "==============================rocfft============================="
 ./rocFFT/build/release/clients/staging/rocfft-test 2>&1 | tee $logs/rocfft.log
+echo "==============================rocsolver============================="
+./rocSOLVER/build/clients/staging/rocsolver-test 2>&1 | tee $logs/rocsolver.log
 echo "==============================rocalution============================="
 ./rocALUTION/build/release/clients/staging/rocalution-test 2>&1 | tee $logs/rocalution.log
 echo "=============================hipblas============================="

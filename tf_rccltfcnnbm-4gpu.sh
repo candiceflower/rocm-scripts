@@ -1,12 +1,15 @@
 #!/bin/bash
 # run_soumith_benchmarks is not applicable for TF1.8 and higher. refer https://github.com/soumith/convnet-benchmarks/issues/138
 #This script is based on python3 . When TF was build with python3, use python3 . When TF was built with python2, replace python3 to python2
-export HIP_VISIBLE_DEVICES=0,1
+#export HIP_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 #export HSA_ENABLE_SDMA=0
 
 cwd=`pwd`
 BASEDIR=/root
 LOGDIR=/dockerx
+
+num_gpus=$(lspci|grep 'controller'|grep 'AMD/ATI'|wc -l)
+echo $num_gpus
 
 mkdir -p /dockerx/tf-rccllogs
 
@@ -23,10 +26,11 @@ run_tf_cnn_benchmarks()
         cd $BENCHDIR
 #     MODELS="alexnet"
        export TF_ROCM_FUSION_ENABLE=1
-        MODELS="alexnet googlenet inception3 inception4 lenet overfeat resnet50 resnet152_v2 trivial vgg11 vgg16 vgg19 resnet101"
-	NGPUS=2
-	ITERATIONS=50
-	BATCH_SIZE="1 2 4 8 16 32 64"
+        MODELS="alexnet googlenet inception3 inception4 resnet50 resnet152_v2 vgg11 vgg16 vgg19 resnet101"
+	NGPUS=$num_gpus
+	ITERATIONS=100
+	#BATCH_SIZE="1 2 4 8 16 32 64"
+	BATCH_SIZE="64"
 
 	for j in ${BATCH_SIZE[@]}
 	do
@@ -46,9 +50,10 @@ run_tf_cnn_benchmarks_128()
     echo "=======================tf_cnn_benchmarks_BS128==============="
         cd $BENCHDIR
     export TF_ROCM_FUSION_ENABLE=1
-    MODELS="alexnet googlenet inception3 lenet overfeat resnet50 trivial vgg11 vgg16 vgg19"
-        NGPUS=2
-        ITERATIONS=50
+    #MODELS="alexnet googlenet inception3 lenet overfeat resnet50 trivial vgg11 vgg16 vgg19"
+    MODELS="resnet50 vgg19 resnet50_v1.5"
+        NGPUS=$num_gpus
+        ITERATIONS=100
         BATCH_SIZE=128
 
         for j in ${BATCH_SIZE[@]}
@@ -69,9 +74,10 @@ run_tf_cnn_benchmarks_256()
     echo "=======================tf_cnn_benchmarks_BS256==============="
         cd $BENCHDIR
     export TF_ROCM_FUSION_ENABLE=1
-    MODELS="alexnet googlenet resnet50_v1.5"
-        NGPUS=2
-        ITERATIONS=50
+    #MODELS="alexnet googlenet resnet50_v1.5"
+    MODELS="resnet50_v1.5"
+        NGPUS=$num_gpus
+        ITERATIONS=100
         BATCH_SIZE=256
 
         for j in ${BATCH_SIZE[@]}
@@ -94,8 +100,8 @@ run_tf_cnn_benchmarks_512()
         cd $BENCHDIR
     export TF_ROCM_FUSION_ENABLE=1
     MODELS="alexnet"
-        NGPUS=2
-        ITERATIONS=50
+        NGPUS=8
+        ITERATIONS=100
         BATCH_SIZE=512
 
         for j in ${BATCH_SIZE[@]}
@@ -116,8 +122,8 @@ run_tf_cnn_benchmarks_1024()
         cd $BENCHDIR
     export TF_ROCM_FUSION_ENABLE=1
     MODELS="alexnet"
-        NGPUS=2
-        ITERATIONS=50
+        NGPUS=8
+        ITERATIONS=100
         BATCH_SIZE=1024
 
         for j in ${BATCH_SIZE[@]}
@@ -132,10 +138,35 @@ run_tf_cnn_benchmarks_1024()
     done
 } 
 
+run_tf_cnn_benchmarks_fp16()
+{
+  cd $BENCHDIR
+  MODELS="resnet50 vgg19 resnet50_v1.5"
+  NGPUS=$num_gpus
+  f_only=False
+  ITERATIONS=100
+  BATCH_SIZE=128
+  display_every=10
+  
+  for j in ${BATCH_SIZE[@]}
+  do
+  for i in ${MODELS[@]}
+  do
+  #echo "Model:${model}_${bsz}_${f_only}_${num_gpus}"
+  /usr/bin/python3 scripts/tf_cnn_benchmarks/tf_cnn_benchmarks.py --num_gpus=${NGPUS} --batch_size=$j --model=$i --all_reduce_spec=nccl --variable_update=replicated --forward_only=${f_only} --print_training_accuracy=True --num_batches=${ITERATIONS} --display_every=${display_every} --use_fp16=True 2>&1 | tee -a tfrccl-fp16-$i-$j.txt
+  cp -rf tfrccl*.txt $LOGDIR
+  #grep -E "total images/sec" $log_file
+  done
+  done
+}
 
-run_tf_cnn_benchmarks
+
+#run_tf_cnn_benchmarks
 run_tf_cnn_benchmarks_128
-run_tf_cnn_benchmarks_256
-run_tf_cnn_benchmarks_512
-run_tf_cnn_benchmarks_1024
+#run_tf_cnn_benchmarks_256
+#run_tf_cnn_benchmarks_512
+#run_tf_cnn_benchmarks_1024
+run_tf_cnn_benchmarks_fp16
+
+grep -nir "total images/sec" $LOGDIR/tfrccl*.txt
 
